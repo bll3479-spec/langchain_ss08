@@ -9,10 +9,10 @@ from openai import OpenAI
 from langchain_core.prompts import ChatPromptTemplate       #llm에 질문할 정규 양식 생성. text로 넣어도 되는 이유
 from langchain_core.output_parsers import StrOutputParser   #output 결과물 정제, 파싱
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv 
 
 #사용할 템플릿
-from templates import *
+import templates as T
 
 #.env: 비밀 키 가져오는 역할
 load_dotenv()
@@ -33,7 +33,7 @@ def get_chat(temperature=0.5, model=MODEL_NAME):
 #chat | StrOutPutParser()은 chat의 답변을 StrOutputParser로 넘겨주는 작동
 def bulid_style_chain(chat):
     #{style}, {text}를 변수로 인식, 이를 채워줌
-    prompt = ChatPromptTemplate.from_template(STYLE_TEMPLATE)
+    prompt = ChatPromptTemplate.from_template(T.STYLE_TEMPLATE)
     #LCEL 문법: prompt를 chat에 넘기고 그 결과를 strOutPutParsers에 다시 넣어주는 연결(chain)
     return prompt | chat | StrOutputParser()
 
@@ -64,7 +64,7 @@ def parsing():
 
 from langchain_classic.output_parsers import ResponseSchema, StructuredOutputParser
 def build_review_chain(chat):
-    prompt = ChatPromptTemplate.from_template(REVIEW_TEMPLATE)
+    prompt = ChatPromptTemplate.from_template(T.REVIEW_TEMPLATE)
     #**StrOutputParser는 거의 아무것도 하지 않는 str만 추출하는 역할
     #StructuredOutputParser: gpt가 생성한 str을 특정한 자료형(구조)으로 파싱
     #schemas: 이러한 변수에는 다음과 같은 정보가 필요하다고 알려줌(name=변수 이름)
@@ -120,6 +120,24 @@ def Legacy_chat():
     print(response)
     print(response.choices[0].message.content)
 
+#LCEL로 넘겨주기 위해 runnarble 패밀리 사용
+#https://modulabs.co.kr/community/momos/284/feeds/3525
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
+
+def bulid_seq_chain(llm):
+    #하려는 것: 질문이 들어옴 -> 질문을 분류(라우터) -> 각 chat이 대답함 -> 깔끔하게 리턴
+    destination_chains = {
+        p['name'] : ChatPromptTemplate.from_template(p['prompt_template']) | llm | StrOutputParser() for p in T.PROMPT_INFOS
+    }
+    print(destination_chains)
+    default_chain = ChatPromptTemplate.from_template("") | llm | StrOutputParser()
+
+    destination_str = '\n'.join(f"{p}" for p in T.PROMPT_INFOS)
+
 
 if __name__ == '__main__':
-    output_parsing()
+    #output_parsing()
+    llm = get_chat()
+    bulid_seq_chain(llm)
