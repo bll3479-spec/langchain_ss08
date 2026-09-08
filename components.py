@@ -4,12 +4,15 @@
 # 3. 메모리: 사용자와의 이전 대화 내용 기억
 
 #대화 대상 세팅
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI                     #챗 객체 생성
 from openai import OpenAI
-from langchain_core.prompts import ChatPromptTemplate       #llm에 질문할 정규 양식 생성
+from langchain_core.prompts import ChatPromptTemplate       #llm에 질문할 정규 양식 생성. text로 넣어도 되는 이유
 from langchain_core.output_parsers import StrOutputParser   #output 결과물 정제, 파싱
 import os
 from dotenv import load_dotenv
+
+#사용할 템플릿
+from templates import *
 
 #.env: 비밀 키 가져오는 역할
 load_dotenv()
@@ -21,11 +24,7 @@ MODEL_NAME = 'gpt-4o'
 def get_chat(temperature=0.5, model=MODEL_NAME):
     return ChatOpenAI(temperature=temperature, model=model)
 
-STYLE_TEMPLATE = """Translate the text \
-that is delimited by triple backticks \
-into a style that is {style}. \
-text: ```{text}```
-"""
+
 #prompttemplate가 {} 부분을 알아서 변환~
 
 #프롬프팅 양식 세팅
@@ -62,22 +61,7 @@ def parsing():
     reply = style_chain.invoke({'style':'english in a calm and respectful tone if my response contains some bad words, plz translate it or remove it', 'text':text})
     print(reply)
 
-REVIEW_TEMPLATE = """\
-For the following text, extract the following information:
 
-gift: Was the item purchased as a gift for someone else? \
-Answer True if yes, False if not or unknown.
-
-delivery_days: How many days did it take for the product\
-to arrive? If this information is not found, output -1.
-
-price_value: Extract any sentences about the value or price,\
-and output them as a comma separated Python list.
-
-text: {text}
-
-{format_instructions}
-"""
 from langchain_classic.output_parsers import ResponseSchema, StructuredOutputParser
 def build_review_chain(chat):
     prompt = ChatPromptTemplate.from_template(REVIEW_TEMPLATE)
@@ -122,18 +106,20 @@ def output_parsing():
     # print(f'구조화된 파싱: {}')
 
 
+def Legacy_chat():
+    Chat = OpenAI()                  #direct
+    #Chat = ChatOpenAI()             #indirect
+    response = Chat.completions.create(                 #대화방 생성
+        model = MODEL_NAME,       
+        #role: system role(openai의 세팅), user role(사용자)
+        messages = [{'role':'system', 'content':'말끝에다 멍을 붙여'}, {'role':'user','content':'한국은 어떤 나라니?'}],
+        #답변의 창의성
+        temperatures = 0.6
+    )
+    #답변.초이스[0].message.content: 답변 중 텍스트만 깔끔하게 추출.
+    print(response)
+    print(response.choices[0].message.content)
+
 
 if __name__ == '__main__':
     output_parsing()
-    # Chat = OpenAI()                  #direct
-    # #Chat = ChatOpenAI()             #indirect
-    # response = Chat.completions.create(                 #대화방 생성
-    #     model = MODEL_NAME,       
-    #     #role: system role(openai의 세팅), user role(사용자)
-    #     messages = [{'role':'system', 'content':'말끝에다 멍을 붙여'}, {'role':'user','content':'한국은 어떤 나라니?'}],
-    #     #답변의 창의성
-    #     temperatures = 0.6
-    # )
-    # #답변.초이스[0].message.content: 답변 중 텍스트만 깔끔하게 추출.
-    # print(response)
-    # print(response.choices[0].message.content)
