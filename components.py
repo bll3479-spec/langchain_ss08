@@ -7,7 +7,7 @@
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
 from langchain_core.prompts import ChatPromptTemplate       #llm에 질문할 정규 양식 생성
-from langchain_core.output_parsers import StrOutPutParser   #output 결과물 정제, 파싱
+from langchain_core.output_parsers import StrOutputParser   #output 결과물 정제, 파싱
 import os
 from dotenv import load_dotenv
 
@@ -36,7 +36,7 @@ def bulid_style_chain(chat):
     #{style}, {text}를 변수로 인식, 이를 채워줌
     prompt = ChatPromptTemplate.from_template(STYLE_TEMPLATE)
     #LCEL 문법: prompt를 chat에 넘기고 그 결과를 strOutPutParsers에 다시 넣어주는 연결(chain)
-    return prompt | chat | StrOutPutParser()
+    return prompt | chat | StrOutputParser()
 
 #프롬프팅, 파서
 #인풋 텍스트 -> 특정한 양식에 맞추어 정제/답변
@@ -53,10 +53,67 @@ def parsing():
     chat = get_chat()
     #gpt에 위의 손님 메일 + (변형) 요청을 보내, 답변을 받아오는 체인 정의
     #style_chain은 prompt -> chat -> stroutputparser로 이어지는 파이프라인
-    style_chain = build_style_chain(chat)
+    style_chain = bulid_style_chain(chat)
+    #chain을 실행할때 style, text를 넣어줄테니 prompt -> chat -> stroutputparser 파이프라인 타셈
+    result = style_chain.invoke({'style':'Korean in a calm and respectful tone', 'text':customer})
+    print(result)
 
-    result = style_chain.invoke({'style':'American English in a calm and respectful tone', 'text':customer})
-s
+    text = input(f'{result}에 대한 나의 답변')
+    reply = style_chain.invoke({'style':'english in a calm and respectful tone if my response contains some bad words, plz translate it or remove it', 'text':text})
+    print(reply)
+
+REVIEW_TEMPLATE = """\
+For the following text, extract the following information:
+
+gift: Was the item purchased as a gift for someone else? \
+Answer True if yes, False if not or unknown.
+
+delivery_days: How many days did it take for the product\
+to arrive? If this information is not found, output -1.
+
+price_value: Extract any sentences about the value or price,\
+and output them as a comma separated Python list.
+
+text: {text}
+
+{format_instructions}
+"""
+from langchain_classic.output_parsers import ResponseSchema, StructuredOutputParser
+def build_review_chain(chat):
+    prompt = ChatPromptTemplate.from_template(REVIEW_TEMPLATE)
+    #**StrOutputParser는 거의 아무것도 하지 않는 str만 추출하는 역할
+    #StructuredOutputParser: gpt가 생성한 str을 특정한 자료형(구조)으로 파싱
+    #schemas: 이러한 변수에는 다음과 같은 정보가 필요하다고 알려줌(name=변수 이름)
+    schemas = [
+    ResponseSchema(name="gift",
+                    description="Was the item purchased as a gift for someone else? "
+                                "Answer True if yes, False if not or unknown."),
+    ResponseSchema(name="delivery_days",
+                    description="How many days did it take for the product to arrive? "
+                                "If this information is not found, output -1."),
+    ResponseSchema(name="price_value",
+                    description="Extract any sentences about the value or price, "
+                                "and output them as a comma separated Python list."),
+]
+    #리뷰를 합친 prompt가 인풋 -> chat이 이를 확인 -> StructuredOutputParser가 chat이 생성한 결과를 schema에 따라 구조화
+    return prompt | chat | StructuredOutputParser.from_response_schemas(schemas), StructuredOutputParser.from_response_schemas(schemas).get_format_instructions() 
+
+#OutputParser의 종류를 바꿔 Parser의 역할 확인
+#리뷰 속에 존재하는 다양한 정보를 parser가 골라 정리해주는 역할
+def output_parsing():
+    customer_review = """\
+        This leaf blower is pretty amazing. It has four settings: candle blower, gentle breeze, \
+        windy city, and tornado. It arrived in two days, just in time for my wife's anniversary \
+        present. I think my wife liked it so much she was speechless. It's slightly more expensive \
+        than the other leaf blowers out there, but I think it's worth it for the extra features.
+        """
+    chat = get_chat()
+    parse_chain, format = build_review_chain(chat)
+    #bulid_review_chain이 시작할 때 필요한 재료: prompt -> review_template -> 그 안에 있는 {}
+    output = parse_chain.invoke({'text': customer_review, 'format_instructions':format})
+    print(f'구조화된 파싱: {type(output).__name__, output}')
+    print(f'구조화 결과 delivery : {output.get('delivery_days')}')
+
     # customer_review = 
 
     # parse_chain, format = 
@@ -67,15 +124,16 @@ s
 
 
 if __name__ == '__main__':
-    Chat = OpenAI()                  #direct
-    #Chat = ChatOpenAI()             #indirect
-    response = Chat.completions.create(                 #대화방 생성
-        model = MODEL_NAME,       
-        #role: system role(openai의 세팅), user role(사용자)
-        messages = [{'role':'system', 'content':'말끝에다 멍을 붙여'}, {'role':'user','content':'한국은 어떤 나라니?'}],
-        #답변의 창의성
-        temperatures = 0.6
-    )
-    #답변.초이스[0].message.content: 답변 중 텍스트만 깔끔하게 추출.
-    print(response)
-    print(response.choices[0].message.content)
+    output_parsing()
+    # Chat = OpenAI()                  #direct
+    # #Chat = ChatOpenAI()             #indirect
+    # response = Chat.completions.create(                 #대화방 생성
+    #     model = MODEL_NAME,       
+    #     #role: system role(openai의 세팅), user role(사용자)
+    #     messages = [{'role':'system', 'content':'말끝에다 멍을 붙여'}, {'role':'user','content':'한국은 어떤 나라니?'}],
+    #     #답변의 창의성
+    #     temperatures = 0.6
+    # )
+    # #답변.초이스[0].message.content: 답변 중 텍스트만 깔끔하게 추출.
+    # print(response)
+    # print(response.choices[0].message.content)
