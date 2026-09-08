@@ -131,13 +131,34 @@ def bulid_seq_chain(llm):
     destination_chains = {
         p['name'] : ChatPromptTemplate.from_template(p['prompt_template']) | llm | StrOutputParser() for p in T.PROMPT_INFOS
     }
-    print(destination_chains)
-    default_chain = ChatPromptTemplate.from_template("") | llm | StrOutputParser()
+    #print(destination_chains)
+    #destination_chains는 4개의 페르소나를 가진 질의응답 체인
+    #default_chain: 넷 중 해당하지 않는 일반 gpt
+    default_chain = ChatPromptTemplate.from_template("{input}") | llm | StrOutputParser()
 
-    destination_str = '\n'.join(f"{p}" for p in T.PROMPT_INFOS)
-
+    destination_str = '\n'.join(f"{p['name']}: {p['description']}" for p in T.PROMPT_INFOS)
+    router_prompt = ChatPromptTemplate.from_template(
+        #MULTI_PROMPT_ROUTER_TEMPLATE: 질문이 들어왔을 때 넷 중 하나 고르시오
+        #MULTI_PROMPT_ROUTER_TEMPLATE이 갖고 있는 '채워줘야 할 공백'의 이름이 destinations
+        #destinations_str: 네 개의 체인이 어떤 역할을 하는 체인인지 설명. prompt_infos
+        T.MULTI_PROMPT_ROUTER_TEMPLATE.format(destinations = destination_str))
+    #라우터 중요!
+    #라우터 프롬프트 -> llm  -> json parser(살 발라줌)
+    router = router_prompt | llm | JsonOutputParser()
+    verbose = True
+    def route(info):
+        #어느 체인이 답할지에 대한 정보를 갖고(info가) 해당하는 체인이 답변하게 하는 코드
+        destination = info.get('destination', 'DEFAULT')
+        chain = destination_chains.get(destination, default_chain)
+        if verbose:
+            print(f'[router] : {destination} -> {info['next_inputs']}')
+        return chain.invoke({'input': info['next_inputs']})
+    return router | RunnableLambda(route)
 
 if __name__ == '__main__':
     #output_parsing()
     llm = get_chat()
-    bulid_seq_chain(llm)
+    router = bulid_seq_chain(llm)
+    questions = ['수학에서 원주가 뭐야?', '왜 건물들은 지진이 나도 안 무너져', '가장 빠른 자료구조가 뭘까']
+    for q in questions:
+        print(f'question: {q}\n answer: {router.invoke({'input': q})[:200]}')
