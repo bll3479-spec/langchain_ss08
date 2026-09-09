@@ -72,6 +72,45 @@ def bulid_graph():
     return workflow.compile()       #그래프 고정
 
 
+
+
+#compile()된 그래프는 get_graph()로 내부 구조(노드/엣지)를 꺼낼 수 있고
+#거기에 draw_mermaid()를 부르면 mermaid 다이어그램 문법이 문자열로 나옴
+
+import os
+OUT_DIR= './'
+def save_graph(graph, name, out_dir=OUT_DIR):
+    os.makedirs(out_dir, exist_ok=True)
+    code = graph.get_graph().draw_mermaid()
+
+    #.md -> GitHub / VSCode 미리보기에서 바로 렌더링됨
+    with open(os.path.join(out_dir, f'{name}.md'), 'w', encoding='utf-8') as f:
+        f.write(f'# {name}\n\n```mermaid\n{code}\n```\n')
+
+    #.html -> 브라우저로 열면 CDN에서 mermaid를 받아 그려줌
+    with open(os.path.join(out_dir, f'{name}.html'), 'w', encoding='utf-8') as f:
+        f.write(f'''<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><title>{name}</title>
+<style>body{{font-family:system-ui,sans-serif;margin:40px;background:#fafafa}}
+.box{{background:#fff;border:1px solid #ddd;border-radius:8px;padding:24px}}</style>
+</head><body>
+<h1>{name}</h1>
+<div class="box"><pre class="mermaid">{code}</pre></div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({{startOnLoad:true}});</script>
+</body></html>''')
+
+    #.png -> mermaid.ink 외부 API를 쓰므로 인터넷 필요. 실패해도 죽지 않게 감쌈
+    try:
+        with open(os.path.join(out_dir, f'{name}.png'), 'wb') as f:
+            f.write(graph.get_graph().draw_mermaid_png())
+        png = ' + png'
+    except Exception:
+        png = ' (png 실패 -> html 사용)'
+
+    print(f'[save_graph] {name}.md + .html{png}')
+    return code
+
 if __name__ == '__main__':
     #그래프 만들기
     #graph -> 고정시킨 workflow가 생성
@@ -80,3 +119,5 @@ if __name__ == '__main__':
     city = input('거주지를 입력하세요')
     address = input('상세주소를 입력하세요')
     graph.invoke({'order_id' : order_id, 'city': city, 'address': address})
+
+    save_graph(graph=graph, name='delivery_plan')
