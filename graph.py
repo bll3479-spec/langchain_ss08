@@ -3,6 +3,9 @@
 # 노드(node): 상태를 받아서 "바뀐 부분만" 딕셔너리로 돌려주는 함수
 # 엣지(edge): 노드를 잇는 화살표. 조건부 엣지면 갈림길이 생김
 
+#+0909: 복습문제
+#눈이 오는 곳은 3일 뒤 배달 재개 프린트 되도록.
+
 from typing import TypedDict, Literal
 from langgraph.graph import StateGraph, START, END
 
