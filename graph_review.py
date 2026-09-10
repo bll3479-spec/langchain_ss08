@@ -5,11 +5,14 @@
 import os
 import pandas as pd
 
+#랭그래프 핵심요소 -> 상태, 노드, 엣지
 from langgraph.graph import StateGraph, START, END
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import ChatOpenAI
 
 import templates as T
+import main as m
 from typing import TypedDict
 
 from dotenv import load_dotenv
@@ -21,11 +24,12 @@ class State(TypedDict):
     reply : str
 
 def thanks_node(state, chat):
-    chain = ChatPromptTemplate.from_template(T.THANKS_TEMPLATE) | chat | StrOutputParser
+    chain = ChatPromptTemplate.from_template(T.THANKS_TEMPLATE) | chat | StrOutputParser()
     reply = chain.invoke({'comment':state['comment']})  #결과 -> gpt의 답변
     return {'reply':reply}
+
 def sorry_node(state, chat):
-    chain = ChatPromptTemplate.from_template(T.IMPROVE_TEMPLATE) | chat | StrOutputParser
+    chain = ChatPromptTemplate.from_template(T.IMPROVE_TEMPLATE) | chat | StrOutputParser()
     reply = chain.invoke({'comment':state['comment']})
     return {'reply':reply}
 
@@ -36,14 +40,36 @@ def route_by_sentiment(state):
         return 'sorry'
 
 
-def build_graph():
+def build_graph(chat):
     graph = StateGraph(State)
-    graph.add_node('thanks', thanks_node)
-    graph.add_node('sorry', sorry_node)
+    #thanks_node, sorry_node 모두 매개변수 필요함
+    #lambda: 함수 축약 방법
+        #def~return x를 한 줄로 lambda x : x+2
+    graph.add_node('thanks', lambda state : thanks_node(state, chat))
+    graph.add_node('sorry', lambda state : sorry_node(state, chat))
+        #리턴 받은 값 : 그래프에 등록된 함수명
     graph.add_conditional_edges(START, route_by_sentiment, 
                                 {'thanks': 'thanks',
                                  'sorry':'sorry'})
 
     graph.add_edge('thanks', END)
     graph.add_edge('sorry', END)
-    return graph.complie()
+    return graph.compile()
+
+
+if __name__ == '__main__':
+    #1. 리뷰 읽어오기
+    df = m.load_review('./tarr_train.txt')
+    print(df)
+    chat = ChatOpenAI(temperature=1, model='gpt-4o')
+    graph = build_graph(chat)
+
+    #2. 한 줄씩 떼기
+    for i in range(len(df)):
+        comment = df.loc[i]['comment']
+        label = df.loc[i]['label']
+        
+    #3. 그래프로 흘려보내기
+    #result에는 그래프 마지막 노드에서의 '상태'가 담겨있음
+        result = graph.invoke({'label':str(label), 'comment':comment})
+        print(f'[{i}번째 댓글에 대한 답글] -> {result['label']} :{result['reply']}')
