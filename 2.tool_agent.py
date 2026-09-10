@@ -18,6 +18,9 @@ from langchain_openai import ChatOpenAI
 #리스트 합쳐줌[] [] => []/ operator.add
 import operator
 
+import wikipedia
+wikipedia.set_user_agent('CoredataLectureBot/1.0 (bll3479@gmail.com)')
+
 class AgentState(TypedDict):
     messages : Annotated[list[AnyMessage], operator.add]
 
