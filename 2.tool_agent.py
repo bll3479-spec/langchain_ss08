@@ -8,7 +8,7 @@ from typing import TypedDict, Annotated
 from langgraph.graph import StateGraph, END
 
 #에이전트 구성을 위해 필요한 langchain component
-from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, ToolMessage
+from langchain_core.messages import (AnyMessage, SystemMessage, HumanMessage, ToolMessage)
 
 #검색을 하기 위한 툴(tools)
 from langchain_community.tools import WikipediaQueryRun
@@ -76,6 +76,67 @@ class Agent:
             print(f'모델로 복귀 \n')
             return {'messages':results}
 
+from langchain_core.tools import tool
+import requests
+
+GEO_URL     = 'https://geocoding-api.open-meteo.com/v1/search'
+WEATHER_URL = 'https://api.open-meteo.com/v1/forecast'
+
+#API가 주는 weather_code(WMO 국제 기상 코드) -> 사람이 읽는 말로 바꿔주는 표
+WMO_CODES = {
+    0: '맑음', 1: '대체로 맑음', 2: '구름 조금', 3: '흐림',
+    45: '안개', 48: '짙은 안개',
+    51: '약한 이슬비', 53: '이슬비', 55: '강한 이슬비',
+    56: '약한 어는 이슬비', 57: '강한 어는 이슬비',
+    61: '약한 비', 63: '비', 65: '강한 비',
+    66: '약한 어는 비', 67: '강한 어는 비',
+    71: '약한 눈', 73: '눈', 75: '강한 눈', 77: '싸락눈',
+    80: '약한 소나기', 81: '소나기', 82: '강한 소나기',
+    85: '약한 눈 소나기', 86: '강한 눈 소나기',
+    95: '뇌우', 96: '우박을 동반한 뇌우', 99: '강한 우박 뇌우',
+}
+
+def fetch_weather(city, country_code='KR'):
+    try:
+        #인터넷 페이지에 요청하여 날씨 결과를 받아오기
+        geo = requests.get(GEO_URL, params = {'name' : city, 'count' : 1, 
+                                              'language' : 'ko', 'country_code' : country_code}).json()
+
+        #국가-도시의 결과를 얻지 못한 경우
+        if not geo.get('results'):
+            return f'{city}의 위도, 경도를 찾지 못했습니다.'
+        loc = geo['results'][0]
+
+        weather = requests.get(WEATHER_URL, params={
+            'latitude': loc['latitude'],
+            'longitude': loc['longitude'],
+            'timezone':'auto'
+        }, timeout=10).json()
+        if weather.get('error'):
+            return f'날씨 API 오류 : {weather.get('reason')}'
+        cur = weather['current'] 
+
+    #1. 인터넷 통신 실패, 2. 요청한 key가 잘못됨, 3. 받아온 value가 이상함
+    except (requests.RequestException, KeyError, ValueError) as e:
+        return f'날씨 API 호출 실패: 원인 {e}'
+
+    sky = WMO_CODES.get(cur['weather_code'], f"알 수 없음(code {cur['weather_code']})")
+    return (f"{loc['name']} ({cur['time']} 기준) | {sky} | 기온 {cur['temperature_2m']}°C | "
+            f"습도 {cur['relative_humidity_2m']}% | 강수량 {cur['precipitation']}mm | "
+            f"풍속 {cur['wind_speed_10m']}km/h")
+
+
+
+@tool
+def get_weather(city:str, country_code:str='KR') -> str:
+    '''현재 city의 날씨 정보를 얻어옵니다.
+    city의 이름은 영어로 되어야 합니다. 예시: seoul, busan, jeju
+    contry_code는 영어 2글자 표준 표기를 따릅니다. 예시:KR, JP, US'''
+    return fetch_weather(city, country_code)
+
+
+
+
 if __name__ == '__main__':
     model = ChatOpenAI(temperature=0.5, model ='gpt-4o')
     system = '''
@@ -84,8 +145,11 @@ if __name__ == '__main__':
             다중 calls를 실행하는 것도 허용합니다.(순차적, 병렬적 call 가능)
             당신이 원하는 것이 정확히 지정되었을 때만 정보를 검색하세요.
             '''
-    tools = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper(top_k_results=2, doc_content_chars_max=1000))
-    bot = Agent(system, [tools], model)
+    wiki = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper(top_k_results=2, doc_content_chars_max=1000))
+    tools = [wiki, get_weather]
+    #print(f'사용도구: {tools.name}')
+
+    bot = Agent(system, tools, model)
 
     question = input('질문해주세요: \n')
     message = HumanMessage(content=question)
