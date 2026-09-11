@@ -193,7 +193,10 @@ wiki = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper(
 
 if __name__ == '__main__':
     graph = build_graph()
-    print(graph.get_graph().print_ascii())
+    graph.get_graph().draw_mermaid_png(
+        output_file_path="team_agent_graph.png"
+    )
+    print("team_agent_graph.png 저장 완료")
 
     task = input('어떤 주제로 글 쓸까? \n')
     thread_id = {'configurable' : {'thread_id':'essay-1'}}
@@ -208,3 +211,5 @@ if __name__ == '__main__':
         print(f'{node_list} 완료')
     final = graph.get_state(thread_id)
     print(final.values['draft'])
+
+
