@@ -8,7 +8,7 @@ import pandas as pd
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI  
-import templates as T
+import basic_component.templates as T
 
 from dotenv import load_dotenv 
 load_dotenv()

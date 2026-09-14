@@ -11,8 +11,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 
-import templates as T
-import main as m
+import basic_component.templates as T
+import basic_component.main as m
 from typing import TypedDict
 
 from dotenv import load_dotenv
