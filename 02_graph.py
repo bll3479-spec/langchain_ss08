@@ -103,7 +103,7 @@ def execute_graph(graph):
         elapsed = time.time() - t0
         print(f'elapsed 걸린 시간: {elapsed}')
         for n, out in zip(ready, outputs):
-            results.append({'id':n['id'], 'action':n['action'], 'result':out})
+            results.append({'id':n['id'], 'action':n['action'],  'depends_on': n.get('depends_on', []), 'result':out})
             done.add(n['id'])
         section += 1
     return results
@@ -112,15 +112,62 @@ def run_action(action):
     time.sleep(1)
     return f'{action} 완료'
 
+#검증: 선행 step에 대한 의존성 검증(그래프가 순환하지 않는가?)
+#DFS, deadrock. cpu나 자원 할당에서 쓰이는 용어. 
+def valid_graph(graph):
+    nodes = graph['nodes']
+    ids = {n['id'] for n in nodes}
+    for n in nodes:
+        for d in n.get('depends_on', []):
+            #d 의존단계, ids 노드에 존재하는 모든 id.
+            if d not in ids:            #실패 사례를 구하는 조건: 선행 단계를 찾아야 하는데 잘못 찾은 것
+                return False, f'{n['id']}가 존재하지 않는 {d}를 참조함'
+    #DFS 알고리즘
+    # id 4가 참조하는 depend [2, 3] 찾기 -> {4 : [2, 3]}
+    graph_maps = {n['id'] : n.get('depends_on', []) for n in nodes}
+    visiting, visited = set(), set()        #왜 set? '중복 없음'
 
+    #함수 내에서 자기 함수 호출: 재귀적 호출
+    def has_cycle(node_id):
+        if node_id in visiting:
+            print(f'True -> {node_id}')
+            return True
+        if node_id in visited:
+            print(f'False -> {node_id}')
+            return False
+        visiting.add(node_id)
+        #4의 의존하는 [2, 3]을 불렀을 때, (2,3은 dep)
+        #5 -> 4를 의존하기에 이는 위의 결과와 같기에 서로 관계가 있음을 체크함
+        for dep in graph_maps.get(node_id, []):
+            # has_cycle(2), has_cycle(3) 형태 -> 이 결과가 있다면 True
+            if has_cycle(dep):
+                return True
+        # 의존하는 노드가 없는 경우(1) -> visiting에 기록이 됨.
+        # discard: 갈 필요 없다고 알림, 결과적으로 visited로 기록.
+            #True (순환이 있음) / False(순환이 없음)
+        # 1, 2, 3 -> visited                                -> False
+        # 4 -> 의존노드 2, 3이기에 위의 if문을 탄 결과 False 리턴 -> True
+        # 5 -> 의존노드 4, -> 2, 3 의존, False 리턴            -> True
+        visiting.discard(node_id)
+        visited.add(node_id)
+        return False
+    #True (순환이 있음) / False(순환이 없음)
+    # 2, 3 자체는 더 밑으로 안 내려감. 4는 2, 3을 의존하기에 True, 5도 4를 의존하기에 True
+    for node_id in ids:
+        if has_cycle(node_id):
+            return False, f"순환 의존성 발견 (노드 '{node_id}' 근처)"
 
+    return True, 'OK'
 
+ 
 
 if __name__ == '__main__':
     query = input('무엇을 하고 싶은지 알려주세요.: \n')
     #query 기반 작업 생성 -> result
     result = create_depend_graph(query)
-    #r = {덩어리 하나}
-    #for r in result['nodes']:
+    
+    ok, msg = valid_graph(result)
+    print(f'{msg}')
+
     response = execute_graph(result)
     print(f'response : {response}')
