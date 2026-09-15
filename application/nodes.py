@@ -1,7 +1,8 @@
-import time, json, traceback
+import time, json, traceback, requests
 from datetime import datetime  # 연, 월, 일
 from zoneinfo import ZoneInfo  # 타임존
 
+import config
 # 랭그래프 내부에서 답변을 주는 gpt를 분리해서 사용하는 것.
 from langchain_openai import ChatOpenAI
 
@@ -35,6 +36,9 @@ def _flatten(items):
     if isinstance(items, list):
         return [str(items)]
     return items
+
+def _call_tool():
+    pass
 
 
 def classify_intent(state: dict):
@@ -133,7 +137,27 @@ def generate_search_keyword(state: dict):
 def search_place(state: dict):
     '''카카오맵 API를 활용하여 search_keyword로 생성된 단어를 검색'''
     print(f"search_place...")
+    location = state.get('location', '서울')
+    keyword = state.get('serach_keyword', '추천')
+    query = f'{location} {keyword}'
+    print(f'카카오맵 검색어 : {query}')
     
+    def _fetch():
+        url = "https://dapi.kakao.com/v2/local/search/keyword.json"
+        params = {'query': query, 'size': 1}
+        headers = {'Authorization': f'KakaoAK {config.KAKAO_API_KEY}'}
+        resq = requests.get{url, headers=headers, params=params, timeout = 5}
+        resq.raise_for_status()
+        return resq.json()['documents']
+    docs = _call_tool('kakao_search', _fetch, query=query)
+    if docs:
+        top = docs[0]
+        place = {'name':top['place_name'],
+                 'address':top['road_address_name'],
+                 'url': top['place_url']}
+    else:
+        place = {'name': '', 'address': '', 'url':''}
+    return {**state, 'recommend_place':place}    
 
 
 def summarize_output(state: dict):
