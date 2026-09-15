@@ -1,0 +1,139 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1789432650072,
+  "projectRoot": "c:\\Users\\user\\Desktop\\git\\langchain_ss08",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "agent_component": {
+      "path": "agent_component",
+      "purpose": null,
+      "fileCount": 4,
+      "lastAccessed": 1789432650020,
+      "keyFiles": [
+        "1.react_agent.py",
+        "2.tool_agent.py",
+        "3.memory_agent.py",
+        "4.team_agent.py"
+      ]
+    },
+    "basic_component": {
+      "path": "basic_component",
+      "purpose": null,
+      "fileCount": 7,
+      "lastAccessed": 1789432650021,
+      "keyFiles": [
+        "components.py",
+        "graph.py",
+        "graph_review.py",
+        "main.py",
+        "rag.py"
+      ]
+    },
+    "data": {
+      "path": "data",
+      "purpose": "Data files",
+      "fileCount": 1,
+      "lastAccessed": 1789432650022,
+      "keyFiles": [
+        "tarr_train.txt"
+      ]
+    },
+    "outputs": {
+      "path": "outputs",
+      "purpose": null,
+      "fileCount": 4,
+      "lastAccessed": 1789432650023,
+      "keyFiles": [
+        "delivery_plan.html",
+        "delivery_plan.md",
+        "delivery_plan.png",
+        "team_agent_graph.png"
+      ]
+    },
+    "pdfs": {
+      "path": "pdfs",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1789432650025,
+      "keyFiles": [
+        "2020_경제금융용어 700선_게시.pdf"
+      ]
+    },
+    "vectordb": {
+      "path": "vectordb",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1789432650026,
+      "keyFiles": [
+        "chroma.sqlite3"
+      ]
+    },
+    "__pycache__": {
+      "path": "__pycache__",
+      "purpose": null,
+      "fileCount": 4,
+      "lastAccessed": 1789432650027,
+      "keyFiles": [
+        "4.team_agent.cpython-313.pyc",
+        "components.cpython-313.pyc",
+        "main.cpython-313.pyc",
+        "templates.cpython-313.pyc"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "application/graph.py",
+      "accessCount": 2,
+      "lastAccessed": 1789436594256,
+      "type": "file"
+    },
+    {
+      "path": "application/main.py",
+      "accessCount": 2,
+      "lastAccessed": 1789436702318,
+      "type": "file"
+    },
+    {
+      "path": "application",
+      "accessCount": 1,
+      "lastAccessed": 1789436458583,
+      "type": "directory"
+    },
+    {
+      "path": "application/node.py",
+      "accessCount": 1,
+      "lastAccessed": 1789436551410,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
